@@ -182,12 +182,12 @@ class MainActivity : ComponentActivity() {
         """.trimIndent()
         val web = android.webkit.WebView(this).apply {
             settings.javaScriptEnabled = false
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(380))
             loadDataWithBaseURL("https://www.openstreetmap.org", html, "text/html", "UTF-8", null)
         }
         android.app.AlertDialog.Builder(this)
             .setTitle("Peta lokasi GPS")
-            .setView(web, dp(320), dp(380))
-            .setPositiveButton("Tutup", null)
+            .setView(web)
             .show()
     }
 
