@@ -67,6 +67,14 @@ class MainActivity : ComponentActivity() {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.BLACK)
         }
+        // Android 15 / targetSdk 35 menggambar konten di belakang system bars.
+        // Sisakan ruang agar tombol foto tidak tertutup navigation bar.
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(layout) { view, insets ->
+            val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            view.setPadding(0, bars.top, 0, bars.bottom)
+            insets
+        }
+        androidx.core.view.ViewCompat.requestApplyInsets(layout)
 
         val header = TextView(this).apply {
             text = "KAMERA LOKASI GPS"
