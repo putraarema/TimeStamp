@@ -63,98 +63,132 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun buildScreen() {
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+        val landscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val root = LinearLayout(this).apply {
+            orientation = if (landscape) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
             setBackgroundColor(Color.BLACK)
         }
-        // Android 15 / targetSdk 35 menggambar konten di belakang system bars.
-        // Sisakan ruang agar tombol foto tidak tertutup navigation bar.
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(layout) { view, insets ->
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            view.setPadding(0, bars.top, 0, bars.bottom)
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
             insets
         }
-        androidx.core.view.ViewCompat.requestApplyInsets(layout)
 
-        val header = TextView(this).apply {
-            text = "KAMERA LOKASI GPS"
-            textSize = 19f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            setPadding(12, 16, 12, 12)
-            setTypeface(null, Typeface.BOLD)
-        }
-        layout.addView(header)
-
-        previewView = PreviewView(this).apply {
-            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-            scaleType = PreviewView.ScaleType.FILL_CENTER
-        }
-        layout.addView(previewView, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
-        ))
-
-        val controls = LinearLayout(this).apply {
+        val sidePanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(14, 8, 14, 14)
+            setPadding(dp(10), dp(6), dp(10), dp(8))
             setBackgroundColor(Color.rgb(24, 24, 24))
         }
+        val header = TextView(this).apply {
+            text = "KAMERA LOKASI GPS"
+            textSize = 18f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            setPadding(6, 6, 6, 8)
+            setTypeface(null, Typeface.BOLD)
+        }
+        sidePanel.addView(header)
+
+        captureButton = Button(this).apply {
+            text = "●  AMBIL FOTO"
+            textSize = 18f
+            isAllCaps = false
+            isEnabled = false
+            minHeight = dp(58)
+            setOnClickListener { takePhoto() }
+        }
+        sidePanel.addView(captureButton, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, dp(58)
+        ).apply { bottomMargin = dp(6) })
 
         val toolsRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
         toolsRow.addView(Button(this).apply {
-            text = "Balik kamera"
-            isAllCaps = false
+            text = "Balik kamera"; isAllCaps = false
             setOnClickListener { switchCamera() }
         }, weightedButtonParams())
         toolsRow.addView(Button(this).apply {
-            text = "Watermark"
-            isAllCaps = false
+            text = "Watermark"; isAllCaps = false
             setOnClickListener { showWatermarkSettings() }
         }, weightedButtonParams())
         toolsRow.addView(Button(this).apply {
-            text = "Galeri"
-            isAllCaps = false
-            setOnClickListener {
-                startActivity(Intent(this@MainActivity, GalleryActivity::class.java))
-            }
+            text = "Galeri"; isAllCaps = false
+            setOnClickListener { startActivity(Intent(this@MainActivity, GalleryActivity::class.java)) }
         }, weightedButtonParams())
-        controls.addView(toolsRow)
+        sidePanel.addView(toolsRow)
+
+        sidePanel.addView(Button(this).apply {
+            text = "Peta GPS"; isAllCaps = false
+            setOnClickListener { showGpsMap() }
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(44))
+            .apply { topMargin = dp(4) })
 
         watermarkSwitch = Switch(this).apply {
-            text = "Tambahkan watermark lokasi & waktu"
-            textSize = 15f
+            text = "Watermark lokasi & waktu"
+            textSize = 14f
             setTextColor(Color.WHITE)
             isChecked = prefs.getBoolean("watermark_enabled", true)
-            setPadding(0, 5, 0, 5)
+            setPadding(0, 3, 0, 3)
             setOnCheckedChangeListener { _, checked ->
                 prefs.edit().putBoolean("watermark_enabled", checked).apply()
             }
         }
-        controls.addView(watermarkSwitch)
+        sidePanel.addView(watermarkSwitch)
 
         statusText = TextView(this).apply {
             textSize = 12f
             setTextColor(Color.LTGRAY)
-            text = "Menunggu izin lokasi..."
-            setPadding(0, 4, 0, 8)
+            text = "Mencari GPS..."
+            setPadding(0, 3, 0, 3)
         }
-        controls.addView(statusText)
+        sidePanel.addView(statusText)
 
-        captureButton = Button(this).apply {
-            text = "AMBIL FOTO"
-            textSize = 16f
-            isAllCaps = false
-            isEnabled = false
-            setOnClickListener { takePhoto() }
+        previewView = PreviewView(this).apply {
+            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+            scaleType = PreviewView.ScaleType.FILL_CENTER
         }
-        controls.addView(captureButton, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, 56
-        ))
-        layout.addView(controls)
-        setContentView(layout)
+        if (landscape) {
+            root.addView(previewView, LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+            root.addView(sidePanel, LinearLayout.LayoutParams(dp(250),
+                LinearLayout.LayoutParams.MATCH_PARENT))
+        } else {
+            root.addView(previewView, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+            root.addView(sidePanel, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        }
+        setContentView(root)
+        androidx.core.view.ViewCompat.requestApplyInsets(root)
+    }
+
+    private fun showGpsMap() {
+        val loc = latestLocation
+        if (loc == null) {
+            Toast.makeText(this, "Menunggu koordinat GPS. Pastikan lokasi aktif.", Toast.LENGTH_LONG).show()
+            updateLocation()
+            return
+        }
+        val lat = loc.latitude
+        val lon = loc.longitude
+        val delta = 0.006
+        val bbox = "${lon - delta},${lat - delta},${lon + delta},${lat + delta}"
+        val html = """
+            <!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+            <style>html,body,iframe{margin:0;width:100%;height:100%;border:0;background:#eee}</style></head>
+            <body><iframe src="https://www.openstreetmap.org/export/embed.html?bbox=$bbox&layer=mapnik&marker=$lat,$lon"></iframe></body></html>
+        """.trimIndent()
+        val web = android.webkit.WebView(this).apply {
+            settings.javaScriptEnabled = false
+            loadDataWithBaseURL("https://www.openstreetmap.org", html, "text/html", "UTF-8", null)
+        }
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Peta lokasi GPS")
+            .setView(web, dp(320), dp(380))
+            .setPositiveButton("Tutup", null)
+            .show()
     }
 
     private fun weightedButtonParams() = LinearLayout.LayoutParams(
